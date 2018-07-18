@@ -1,6 +1,7 @@
 {
-    "version"           : "1.0.2",
+    "version"           : "2.12.0",
     "name"              : "Ceres",
+    "marketplaceName"   : {"de": "Ceres","en": "Ceres"},
     "description"       : "This is the official Ceres plugin developed by plentymarkets. Ceres is the default template plugin for plentymarkets 7 online stores.",
     "author"            : "plentymarkets GmbH",
     "license"           : "AGPL-3.0",
@@ -17,6 +18,30 @@
     "namespace"         : "Ceres",
     "serviceProvider"   : "Ceres\\Providers\\TemplateServiceProvider",
     "javaScriptFiles"   : [],
+    "runOnBuild"        : [
+        "Ceres\\Migrations\\WebshopSettingsMigration_0_0_1",
+        "Ceres\\Migrations\\HomepageShopBuilderMigration_0_0_1",
+        "Ceres\\Migrations\\ConfigPropertiesMigration_0_0_1",
+        "Ceres\\Migrations\\Migration_2018_07_06_001_RebuildShopBuilderHomepage"
+    ],
+    "dataProviders"     :
+    [
+        {
+            "key":"Ceres\\Containers\\CeresItemListContainer1",
+            "name":"First item list",
+            "description":"Display a configurable list of items in your online store"
+        },
+        {
+            "key":"Ceres\\Containers\\CeresItemListContainer2",
+            "name":"Second item list",
+            "description":"Display a configurable list of items in your online store"
+        },
+        {
+            "key":"Ceres\\Containers\\CeresItemListContainer3",
+            "name":"Third item list",
+            "description":"Display a configurable list of items in your online store"
+        }
+    ],
     "containers"        :
     [
         {
@@ -25,14 +50,29 @@
             "description"   : "Add style to Ceres with a theme plugin."
         },
         {
+            "key"           : "Template.StyleOverwrite",
+            "name"          : "Template: Override style",
+            "description"   : "Override the default CSS file of Ceres."
+        },
+        {
             "key"           : "Script.Loader",
             "name"          : "Script loader: Register/load JS",
             "description"   : "Register scripts, events and other JS related items."
         },
         {
+            "key"           : "Script.AfterScriptsLoaded",
+            "name"          : "Script loader: After scripts loaded",
+            "description"   : "Load scripts, events and other JS related items, e.g. Vue components, after frameworks and scripts have been initialised."
+        },
+        {
             "key"           : "StaticPages.CancellationRights",
             "name"          : "Static Pages: Cancellation rights",
             "description"   : "Add additional content on the cancellation rights page."
+        },
+        {
+            "key"           : "StaticPages.CancellationForm",
+            "name"          : "Static Pages: Cancellation form",
+            "description"   : "Add additional content on the cancellation form page."
         },
         {
             "key"           : "StaticPages.LegalDisclosure",
@@ -55,6 +95,61 @@
             "description"   : "Add additional content on the 404 page."
         },
         {
+            "key"           : "Homepage",
+            "name"          : "Override homepage",
+            "description"   : "Override the complete homepage."
+        },
+        {
+            "key"           : "Homepage.Container1",
+            "name"          : "Homepage: Container 1",
+            "description"   : "Replace the image slider of the homepage."
+        },
+        {
+            "key"           : "Homepage.Container2",
+            "name"          : "Homepage: Container 2",
+            "description"   : "Replace the upper item preview of the homepage."
+        },
+        {
+            "key"           : "Homepage.Container3",
+            "name"          : "Homepage: Container 3",
+            "description"   : "Replace the lower item preview of the homepage."
+        },
+        {
+            "key"           : "Homepage.Container4",
+            "name"          : "Homepage: Container 4",
+            "description"   : "Replace the first category preview of the homepage."
+        },
+        {
+            "key"           : "Homepage.Container5",
+            "name"          : "Homepage: Container 5",
+            "description"   : "Replace the second category preview of the homepage."
+        },
+        {
+            "key"           : "Homepage.Container6",
+            "name"          : "Homepage: Container 6",
+            "description"   : "Replace the first list of items of the homepage."
+        },
+        {
+            "key"           : "Homepage.Container7",
+            "name"          : "Homepage: Container 7",
+            "description"   : "Replace the third category preview of the homepage."
+        },
+        {
+            "key"           : "Homepage.Container8",
+            "name"          : "Homepage: Container 8",
+            "description"   : "Replace the fourth category preview of the homepage."
+        },
+        {
+            "key"           : "Homepage.Container9",
+            "name"          : "Homepage: Container 9",
+            "description"   : "Replace the second list of items of the homepage."
+        },
+        {
+            "key"           : "Homepage.Container10",
+            "name"          : "Homepage: Container 10",
+            "description"   : "Add additional content on the homepage."
+        },
+        {
             "key"           : "Homepage.PaymentMethods",
             "name"          : "Homepage: Payment method container",
             "description"   : "Add a logo of the payment method to the payment methods on the homepage."
@@ -70,9 +165,19 @@
             "description"   : "Add a \"Certified by\" logo to the container on the homepage."
         },
         {
+            "key"           : "Header",
+            "name"          : "Header: Override header",
+            "description"   : "Override the complete header of all pages."
+        },
+        {
             "key"           : "Header.LeftSide",
             "name"          : "Header: Left header container",
             "description"   : "Add content to the container on the left in the header."
+        },
+        {
+            "key"           : "Footer",
+            "name"          : "Footer: Override footer",
+            "description"   : "Override the complete footer of all pages."
         },
         {
             "key"           : "Footer.RowOne",
@@ -113,6 +218,31 @@
             "key"           : "SingleItem.AdditionalContentAfterAddToBasket",
             "name"          : "Single item: Additional content after \"Add to shopping cart\" button",
             "description"   : "Add additional content after the 'Add to shopping cart' button in the single item view."
+        },
+        {
+            "key"           : "SingleItem.AdditionalContentAfterVAT",
+            "name"          : "Single item: Additional content after \"VAT\" information",
+            "description"   : "Add additional content after the 'VAT' information in the single item view."
+        },
+        {
+            "key"           : "SingleItem.AddDetailTabs",
+            "name"          : "Single item: Add detail tabs",
+            "description"   : "Add additional tabs to the tab menu in the single item view."
+        },
+        {
+            "key"           : "SingleItem.AddDetailTabsContent",
+            "name"          : "Single item: Add content to detail tabs",
+            "description"   : "Add content to the detail tabs in the single item view."
+        },
+        {
+            "key"           : "SingleItem.ItemListContainer",
+            "name"          : "Single item: Container for item lists",
+            "description"   : "Add item lists in the single item view."
+        },
+        {
+            "key"           : "SingleItem.FeedbackContainer",
+            "name"          : "Single item: Container for customer feedback",
+            "description"   : "Add customer feedback in the single item view."
         },
         {
             "key"           : "BasketTotals.BeforeItemSum",
@@ -168,6 +298,11 @@
             "key"           : "Basket.AfterCheckoutButton",
             "name"          : "Shopping cart: After \"Checkout\" button",
             "description"   : "Add content after the 'Checkout' button in the shopping cart."
+        },
+        {
+            "key"           : "Basket.ExtendOverlayButtons",
+            "name"          : "Shopping cart overlay: Extend buttons",
+            "description"   : "Add additional content to the 'add to basket overlay' buttons."
         },
         {
             "key"           : "BasketPreview.BeforeCheckoutButton",
@@ -284,6 +419,28 @@
             "description"   : "Add content after the 'Order now' button in the checkout."
         },
         {
+            "key"           : "Checkout.CustomAddressField",
+            "name"          : "Checkout: Address field container",
+            "description"   : "Add content, e.g. one or multiple custom address fields, at the bottom of the address form."
+        },
+        {
+            "key"           : "OrderConfirmation.Override",
+            "name"          : "Order confirmation: Override order confirmation",
+            "description"   : "Override the complete order confirmation page.",
+            "multiple"      : false
+        },
+        {
+            "key"           : "OrderConfirmation.BeforeOrderDetails",
+            "name"          : "Order confirmation: Before order details",
+            "description"   : "Add content before the order details on the order confirmation page.",
+            "multiple"      : false
+        },
+        {
+            "key"           : "OrderConfirmation.AdditionalShippingInformation",
+            "name"          : "Order confirmation: Additional shipping information",
+            "description"   : "Add additional shipping information to the order details on the order confirmation page."
+        },
+        {
             "key"           : "OrderConfirmation.AdditionalPaymentInformation",
             "name"          : "Order confirmation: Additional payment information",
             "description"   : "Add additional payment information on the order confirmation page."
@@ -300,6 +457,16 @@
             "description"   : "Add content after totals on the order confirmation page."
         },
         {
+            "key"           : "MyAccount.OrderHistoryPaymentInformation",
+            "name"          : "My account: Additional payment information",
+            "description"   : "Add additional payment information after the order information on the My account page."
+        },
+        {
+            "key"           : "MyAccount.OrderReturnHistoryItem",
+            "name"          : "My account: Additional order return information",
+            "description"   : "Add additional information after the order return details."
+        },
+        {
             "key"           : "CategoryItem.BeforePrices",
             "name"          : "Category item list: Before prices container",
             "description"   : "Add content before the prices in the category item view."
@@ -308,7 +475,31 @@
             "key"           : "CategoryItem.AfterPrices",
             "name"          : "Category item list: After prices container",
             "description"   : "Add content after the prices in the category item view."
+        },
+        {
+            "key"           : "CategoryItem.SideNavBarBottom",
+            "name"          : "Category item list: Container below side navigation",
+            "description"   : "Add content below the side navigation bar in the category item view."
+        },
+        {
+            "key"           : "Login.AdditionalContentAfterButtons",
+            "name"          : "Login: Container below the buttons",
+            "description"   : "Add content below the buttons in the login view."
+        },
+        {
+            "key"           : "LoginOverlay.ExtendOverlayButtons",
+            "name"          : "Login overlay: Container in a row with the buttons",
+            "description"   : "Add content in the login overlay."
+        },
+        {
+            "key"           : "RegistrationOverlay.ExtendOverlayButtons",
+            "name"          : "Registration overlay: Container in a row with the buttons",
+            "description"   : "Add content in the registration overlay."
+        },
+        {
+            "key"           : "Search.Filter",
+            "name"          : "Search: Override search filters",
+            "description"   : "Override search filters in item lists and search results."
         }
-    ],
-    "dataProviders"     : []
+    ]
 }

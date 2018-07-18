@@ -1,24 +1,33 @@
 Vue.component("item-lazy-img", {
 
+    delimiters: ["${", "}"],
+
     props: [
         "imageUrl",
         "template"
     ],
 
-    created: function()
+    created()
     {
         this.$options.template = this.template;
     },
 
-    ready: function()
+    mounted()
     {
-        var self = this;
-
-        setTimeout(function()
+        this.$nextTick(() =>
         {
-            $(self.$els.lazyImg).show().lazyload({
-                effect: "fadeIn"
-            });
-        }, 1);
+            setTimeout(() =>
+            {
+                $(this.$refs.lazyImg).show().lazyload({threshold : 100});
+            }, 1);
+        });
+    },
+
+    methods:
+    {
+        loadImage()
+        {
+            $(this.$refs.lazyImg).trigger("appear");
+        }
     }
 });

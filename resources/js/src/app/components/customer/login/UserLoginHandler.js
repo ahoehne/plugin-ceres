@@ -1,77 +1,70 @@
-var ApiService = require("services/ApiService");
-var ResourceService = require("services/ResourceService");
+import {isDefined}from "../../../helper/utils";
+const ApiService = require("services/ApiService");
+
+import ValidationService from "services/ValidationService";
 
 Vue.component("user-login-handler", {
 
-    props: [
-        "userData",
-        "template"
-    ],
+    delimiters: ["${", "}"],
 
-    data: function()
-    {
-        return {
-            username: "",
-            isLoggedIn: {}
-        };
+    props: {
+        template: {
+            type: String,
+            default: "#vue-user-login-handler"
+        }
     },
 
-    created: function()
+    computed: Vuex.mapGetters([
+        "username",
+        "isLoggedIn"
+    ]),
+
+    created()
     {
         this.$options.template = this.template;
+
+        ApiService.get("/rest/io/customer", {}, {keepOriginalResponse: true})
+            .done(response =>
+            {
+                if (isDefined(response.data))
+                {
+                    this.$store.commit("setUserData", response.data);
+                }
+            });
     },
 
     /**
      * Add the global event listener for login and logout
      */
-    ready: function()
+    mounted()
     {
-        ResourceService.bind("user", this, "isLoggedIn");
-
-        this.setUsername(this.userData);
-        this.addEventListeners();
+        this.$nextTick(() =>
+        {
+            this.addEventListeners();
+        });
     },
 
     methods: {
         /**
-         * Set the current user logged in
-         * @param userData
-         */
-        setUsername: function(userData)
-        {
-            if (userData)
-            {
-                if (userData.firstName.length > 0 && userData.lastName.length > 0)
-                {
-                    this.username = userData.firstName + " " + userData.lastName;
-                }
-                else
-                {
-                    this.username = userData.options[0].value;
-                }
-            }
-        },
-
-        /**
          * Adds login/logout event listeners
          */
-        addEventListeners: function()
+        addEventListeners()
         {
-            var self = this;
+            ApiService.listen("AfterAccountAuthentication", userData =>
+            {
+                this.$store.commit("setUserData", userData.accountContact);
+            });
 
-            ApiService.listen("AfterAccountAuthentication",
-                function(userData)
-                {
-                    self.setUsername(userData.accountContact);
-                    ResourceService.getResource("user").set({isLoggedIn: true});
-                });
+            ApiService.listen("AfterAccountContactLogout", () =>
+            {
+                this.$store.commit("setUserData", null);
+            });
+        },
 
-            ApiService.listen("AfterAccountContactLogout",
-                function()
-                {
-                    self.username = "";
-                    ResourceService.getResource("user").set({isLoggedIn: false});
-                });
+        unmarkInputFields()
+        {
+            ValidationService.unmarkAllFields($("#login"));
+            ValidationService.unmarkAllFields($("#registration"));
         }
     }
 });

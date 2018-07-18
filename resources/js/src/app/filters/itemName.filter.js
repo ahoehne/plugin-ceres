@@ -1,18 +1,36 @@
-Vue.filter("itemName", function(item, selectedName)
+import TranslationService from "services/TranslationService";
+
+Vue.filter("itemName", ({texts:{name1, name2, name3}, variation:{name, bundleType}}, selectedName = App.config.item.itemName, itemDisplayName = App.config.item.displayName) =>
 {
+    let itemName = "";
 
-    if (selectedName === "0" && item.name1 !== "")
+    if (selectedName === 1 && name2 !== "")
     {
-        return item.name1;
+        itemName = name2;
     }
-    else if (selectedName === "1" && item.name2 !== "")
+    else if (selectedName === 2 && name3 !== "")
     {
-        return item.name2;
+        itemName = name3;
     }
-    else if (selectedName === "2" && item.name3 !== "")
+    else
     {
-        return item.name3;
+        itemName = name1;
     }
 
-    return item.name1;
+    if (itemDisplayName === "itemNameVariationName" && name && name.length)
+    {
+        itemName = `${itemName} ${name}`;
+    }
+
+    if (itemDisplayName === "variationName" && name && name.length)
+    {
+        itemName = name;
+    }
+
+    if (bundleType === "bundle")
+    {
+        itemName = TranslationService.translate("Ceres::Template.itemBundleName", {itemName});
+    }
+
+    return itemName;
 });

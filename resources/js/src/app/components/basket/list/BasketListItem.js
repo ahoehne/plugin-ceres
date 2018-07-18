@@ -1,8 +1,11 @@
-var ResourceService       = require("services/ResourceService");
-// var ApiService          = require("services/ApiService");
-// var NotificationService = require("services/NotificationService");
+import ExceptionMap from "exceptions/ExceptionMap";
+import TranslationService from "services/TranslationService";
+
+const NotificationService = require("services/NotificationService");
 
 Vue.component("basket-list-item", {
+
+    delimiters: ["${", "}"],
 
     props: [
         "basketItem",
@@ -11,17 +14,60 @@ Vue.component("basket-list-item", {
         "template"
     ],
 
-    data: function()
+    data()
     {
         return {
             waiting: false,
-            deleteConfirmed: false,
-            deleteConfirmedTimeout: null,
-            itemCondition: ""
+            waitingForDelete: false,
+            itemCondition: "",
+            showMoreInformation: false
         };
     },
 
-    created: function()
+    computed:
+    {
+        image()
+        {
+            const itemImages = this.$options.filters.itemImages(this.basketItem.variation.data.images, "urlPreview");
+
+            return this.$options.filters.itemImage(itemImages);
+        },
+
+        altText()
+        {
+            const altText = this.image && this.image.alternate ? this.image.alternate : this.$options.filters.itemName(this.basketItem.variation.data);
+
+            return altText;
+        },
+
+        isInputLocked()
+        {
+            return this.waiting || this.isBasketLoading;
+        },
+
+        propertySurchargeSum()
+        {
+            let sum = 0;
+
+            for (const property of this.basketItem.basketItemOrderParams)
+            {
+                sum += this.$options.filters.propertySurcharge(this.basketItem.variation.data.properties, property.propertyId);
+            }
+
+            return sum;
+        },
+
+        itemTotalPrice()
+        {
+            return this.basketItem.quantity * (this.basketItem.variation.data.prices.default.unitPrice.value + this.propertySurchargeSum);
+        },
+
+        ...Vuex.mapState({
+            isBasketLoading: state => state.basket.isBasketLoading
+        })
+    },
+
+    created()
     {
         this.$options.template = this.template;
     },
@@ -31,31 +77,21 @@ Vue.component("basket-list-item", {
         /**
          * Delete item from basket
          */
-        deleteItem: function()
+        deleteItem()
         {
-            var self = this;
+            if (!this.waiting && !this.waitingForDelete && !this.isBasketLoading)
+            {
+                this.waitingForDelete = true;
 
-            if (!this.deleteConfirmed)
-            {
-                this.deleteConfirmed = true;
-                this.deleteConfirmedTimeout = window.setTimeout(
-                    function()
+                this.$store.dispatch("removeBasketItem", this.basketItem.id).then(
+                    response =>
                     {
-                        self.resetDelete();
+                        document.dispatchEvent(new CustomEvent("afterBasketItemRemoved", {detail: this.basketItem}));
+                        this.waitingForDelete = false;
                     },
-                    5000
-                );
-            }
-            else
-            {
-                this.waiting = true;
-                ResourceService
-                    .getResource("basketItems")
-                    .remove(this.basketItem.id)
-                    .fail(function()
+                    error =>
                     {
-                        self.resetDelete();
-                        self.waiting = false;
+                        this.waitingForDelete = false;
                     });
             }
         },
@@ -64,35 +100,60 @@ Vue.component("basket-list-item", {
          * Update item quantity in basket
          * @param quantity
          */
-        updateQuantity: function(quantity)
+        updateQuantity(quantity)
         {
-            if (this.basketItem.quantity === quantity)
+            if (this.basketItem.quantity !== quantity)
             {
-                return;
+                this.waiting = true;
+
+                const origQty = this.basketItem.quantity;
+
+                this.$store.dispatch("updateBasketItemQuantity", {basketItem: this.basketItem, quantity: quantity}).then(
+                    response =>
+                    {
+                        document.dispatchEvent(new CustomEvent("afterBasketItemQuantityUpdated", {detail: this.basketItem}));
+                        this.waiting = false;
+                    },
+                    error =>
+                    {
+                        this.basketItem.quantity = origQty;
+
+                        if (this.size === "small")
+                        {
+                            this.$store.dispatch(
+                                "addBasketNotification",
+                                {
+                                    type: "error",
+                                    message: TranslationService.translate(
+                                        "Ceres::Template." + ExceptionMap.get(error.data.exceptionCode.toString())
+                                    )
+                                }
+                            );
+                        }
+                        else
+                        {
+                            NotificationService.error(
+                                TranslationService.translate(
+                                    "Ceres::Template." + ExceptionMap.get(error.data.exceptionCode.toString())
+                                )
+                            ).closeAfter(5000);
+                        }
+
+                        this.waiting = false;
+                    });
             }
-
-            this.basketItem.quantity = quantity;
-            this.waiting = true;
-
-            ResourceService
-                .getResource("basketItems")
-                .set(this.basketItem.id, this.basketItem)
-                .fail(function()
-                {
-                    this.waiting = false;
-                }.bind(this));
         },
 
-        /**
-         * Cancel delete
-         */
-        resetDelete: function()
+        isPropertyVisible(propertyId)
         {
-            this.deleteConfirmed = false;
-            if (this.deleteConfirmedTimeout)
+            const property = this.basketItem.variation.data.properties.find(property => property.property.id === parseInt(propertyId));
+
+            if (property)
             {
-                window.clearTimeout(this.deleteConfirmedTimeout);
+                return property.property.isShownAtCheckout;
             }
+
+            return false;
         }
     }
 });

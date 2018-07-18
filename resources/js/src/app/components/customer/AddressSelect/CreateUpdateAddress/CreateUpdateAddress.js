@@ -1,25 +1,40 @@
-var AddressService    = require("services/AddressService");
-var ValidationService = require("services/ValidationService");
+const NotificationService = require("services/NotificationService");
+
+import ValidationService from "services/ValidationService";
 
 Vue.component("create-update-address", {
+
+    delimiters: ["${", "}"],
 
     props: [
         "addressData",
         "addressModal",
-        "addressList",
         "modalType",
         "addressType",
         "template"
     ],
 
-    data: function()
+    data()
     {
         return {
-            waiting: false
+            waiting: false,
+            addressFormNames:
+            {
+                1: "#billing_address_form",
+                2: "#delivery_address_form"
+            }
         };
     },
 
-    created: function()
+    computed:
+    {
+        addressList()
+        {
+            this.$store.getters.getAddressList(this.addressType);
+        }
+    },
+
+    created()
     {
         this.$options.template = this.template;
     },
@@ -28,16 +43,14 @@ Vue.component("create-update-address", {
         /**
          * Validate the address fields
          */
-        validate: function()
+        validate()
         {
-            var self = this;
-
-            ValidationService.validate($("#my-form"))
-                .done(function()
+            ValidationService.validate($(this.addressFormNames[this.addressType]))
+                .done(() =>
                 {
-                    self.saveAddress();
+                    this.saveAddress();
                 })
-                .fail(function(invalidFields)
+                .fail(invalidFields =>
                 {
                     ValidationService.markInvalidFields(invalidFields, "error");
                 });
@@ -46,9 +59,9 @@ Vue.component("create-update-address", {
         /**
          * Save the new address or update an existing one
          */
-        saveAddress: function()
+        saveAddress()
         {
-            if (this.modalType === "create")
+            if (this.modalType === "initial" || this.modalType === "create")
             {
                 this.createAddress();
             }
@@ -61,56 +74,124 @@ Vue.component("create-update-address", {
         /**
          * Update an address
          */
-        updateAddress: function()
+        updateAddress()
         {
             this.waiting = true;
+            this._syncOptionTypesAddressData();
 
-            AddressService
-                .updateAddress(this.addressData, this.addressType)
-                .done(function()
-                {
-                    this.addressModal.hide();
-
-                    for (var key in this.addressList)
+            this.$store.dispatch("updateAddress", {address: this.addressData, addressType: this.addressType})
+                .then(
+                    resolve =>
                     {
-                        var address = this.addressList[key];
+                        this.addressModal.hide();
+                        this.waiting = false;
+                    },
+                    error =>
+                    {
+                        this.waiting = false;
 
-                        if (address.id === this.addressData.id)
+                        if (error.validation_errors)
                         {
-                            for (var attribute in this.addressList[key])
-                            {
-                                this.addressList[key][attribute] = this.addressData[attribute];
-                            }
-
-                            break;
+                            this._handleValidationErrors(error.validation_errors);
                         }
                     }
-
-                    this.waiting = false;
-                }.bind(this));
+                );
         },
 
         /**
          * Create a new address
          */
-        createAddress: function()
+        createAddress()
         {
             this.waiting = true;
+            this._syncOptionTypesAddressData();
 
-            AddressService
-                .createAddress(this.addressData, this.addressType, true)
-                .done(function(newAddress)
+            this.$store.dispatch("createAddress", {address: this.addressData, addressType: this.addressType})
+                .then(
+                    response =>
+                    {
+                        this.addressModal.hide();
+                        this.waiting = false;
+                    },
+                    error =>
+                    {
+                        this.waiting = false;
+
+                        if (error.validation_errors)
+                        {
+                            this._handleValidationErrors(error.validation_errors);
+                        }
+                    }
+                );
+        },
+
+        _handleValidationErrors(validationErrors)
+        {
+            ValidationService.markFailedValidationFields($(this.addressFormNames[this.addressType]), validationErrors);
+
+            let errorMessage = "";
+
+            for (const value of Object.values(validationErrors))
+            {
+                errorMessage += value + "<br>";
+            }
+
+            NotificationService.error(errorMessage);
+        },
+
+        _syncOptionTypesAddressData()
+        {
+
+            if (typeof this.addressData.options !== "undefined")
+            {
+                for (const optionType of this.addressData.options)
                 {
-                    this.addressData = newAddress;
+                    switch (optionType.typeId)
+                    {
+                    case 1:
+                        {
+                            if (this.addressData.vatNumber && this.addressData.vatNumber !== optionType.value)
+                            {
+                                optionType.value = this.addressData.vatNumber;
+                            }
 
-                    this.addressModal.hide();
-                    this.addressList.push(this.addressData);
+                            break;
+                        }
 
-                    this.$dispatch("new-address-created", this.addressData);
+                    case 9:
+                        {
+                            if (this.addressData.birthday && this.addressData.birthday !== optionType.value)
+                            {
+                                optionType.value = this.addressData.birthday;
+                            }
+                            break;
+                        }
 
-                    this.waiting = false;
-                }.bind(this));
+                    case 11:
+                        {
+                            if (this.addressData.title && this.addressData.title !== optionType.value)
+                            {
+                                optionType.value = this.addressData.title;
+                            }
+                            break;
+                        }
+
+                    case 4:
+                        {
+                            if (this.addressData.telephone && this.addressData.telephone !== optionType.value)
+                            {
+                                optionType.value = this.addressData.telephone;
+                            }
+                            break;
+                        }
+                    }
+                }
+            }
+        },
+
+        emitInputEvent(event)
+        {
+            this.$emit("input", event);
         }
     }
-
 });

@@ -1,150 +1,181 @@
-var ApiService = require("services/ApiService");
-var ModalService = require("services/ModalService");
-var AddressService = require("services/AddressService");
+import {isNullOrUndefined, isNull}from "../../../helper/utils";
+
+const ApiService = require("services/ApiService");
+const ModalService = require("services/ModalService");
+const AddressFieldService = require("services/AddressFieldService");
+
+import ValidationService from "services/ValidationService";
+import TranslationService from "services/TranslationService";
 
 Vue.component("address-select", {
 
+    delimiters: ["${", "}"],
+
     props: [
-        "addressList",
-        "addressType",
-        "selectedAddressId",
         "template",
+        "addressType",
         "showError"
     ],
 
-    data: function()
+    data()
     {
         return {
-            selectedAddress: {},
             addressModal   : {},
             modalType      : "",
             headline       : "",
-            addressToEdit  : {},
+            addressToEdit  : {
+                addressSalutation: 0,
+                gender: "male",
+                countryId        : this.shippingCountryId
+            },
             addressToDelete: {},
-            deleteModal: ""
+            deleteModal    : "",
+            deleteModalWaiting: false,
+            addressOptionTypeFieldMap:
+            {
+                1: "vatNumber",
+                4: "telephone",
+                9: "birthday",
+                11: "title"
+            }
         };
+    },
+
+    computed:
+    {
+        selectedAddress()
+        {
+            return this.$store.getters.getSelectedAddress(this.addressType);
+        },
+
+        addressList()
+        {
+            return this.$store.getters.getAddressList(this.addressType);
+        },
+
+        shippingCountryId()
+        {
+            return this.$store.state.localization.shippingCountryId;
+        },
+
+        isAddAddressEnabled()
+        {
+            if (this.addressType === "1")
+            {
+                return this.$store.getters.isLoggedIn || this.addressList.length < 1;
+            }
+
+            return this.$store.getters.isLoggedIn || this.addressList.length < 2;
+        },
+
+        isAddressListEmpty()
+        {
+            return !(this.addressList && this.addressList.length > 0);
+        },
+
+        ...Vuex.mapState({
+            isBasketLoading: state => state.basket.isBasketLoading,
+            countryList: state => state.localization.shippingCountries
+        })
     },
 
     /**
      *  Check whether the address list is not empty and select the address with the matching ID
      */
-    created: function()
+    created()
     {
         this.$options.template = this.template;
-
         this.addEventListener();
     },
 
     /**
      * Select the address modal
      */
-    ready: function()
+    mounted()
     {
-        if (!this.isAddressListEmpty())
+        this.$nextTick(() =>
         {
-            this.loadSelectedAddress();
-        }
-        else
-        {
-            this.addressList = [];
-        }
-
-        this.addressModal = ModalService.findModal(this.$els.addressModal);
-        this.deleteModal = ModalService.findModal(this.$els.deleteModal);
+            this.addressModal = ModalService.findModal(this.$refs.addressModal);
+            this.deleteModal = ModalService.findModal(this.$refs.deleteModal);
+        });
     },
 
     methods: {
         /**
          * Add the event listener
          */
-        addEventListener: function()
+        addEventListener()
         {
-            var self = this;
-
-            ApiService.listen("AfterAccountContactLogout",
-                function()
-                {
-                    self.cleanUserAddressData();
-                });
-        },
-
-        /**
-         * Load the address filtered by selectedId into selectedAddress
-         */
-        loadSelectedAddress: function()
-        {
-            var isSelectedAddressSet = false;
-
-            for (var index in this.addressList)
+            ApiService.listen("AfterAccountContactLogout", () =>
             {
-                if (this.addressList[index].id === this.selectedAddressId)
-                {
-                    this.selectedAddress = this.addressList[index];
-                    isSelectedAddressSet = true;
-                    this.$dispatch("address-changed", this.selectedAddress);
-                }
-            }
-
-            if (!isSelectedAddressSet)
-            {
-                this.selectedAddressId = null;
-            }
-        },
-
-        /**
-         * Remove all user related addresses from the component
-         */
-        cleanUserAddressData: function()
-        {
-            this.addressList = this.addressList.filter(function(value)
-            {
-                return value.id === -99;
+                this.$store.commit("resetAddress", this.addressType);
             });
-
-            if (this.selectedAddressId !== -99)
-            {
-                this.selectedAddress = {};
-                this.selectedAddressId = "";
-            }
         },
 
         /**
          * Update the selected address
          * @param index
          */
-        onAddressChanged: function(index)
+        onAddressChanged(address)
         {
-            this.selectedAddress = this.addressList[index];
-
-            this.$dispatch("address-changed", this.selectedAddress);
-        },
-
-        /**
-         * Check whether the address list is empty
-         * @returns {boolean}
-         */
-        isAddressListEmpty: function()
-        {
-            return !(this.addressList && this.addressList.length > 0);
+            this.$emit("address-changed", address);
         },
 
         /**
          * Check whether a company name exists and show it in bold
          * @returns {boolean}
          */
-        showNameStrong: function()
+        showNameStrong()
         {
             return !this.selectedAddress.name1 || this.selectedAddress.name1.length === 0;
         },
 
         /**
+         * Show the add modal initially, if no address is selected in checkout
+         */
+        showInitialAddModal()
+        {
+            this.modalType = "initial";
+
+            if (AddressFieldService.isAddressFieldEnabled(this.addressToEdit.countryId, this.addressType, "salutation"))
+            {
+                this.addressToEdit = {
+                    addressSalutation: 0,
+                    gender: "male",
+                    countryId        : this.shippingCountryId
+                };
+            }
+            else
+            {
+                this.addressToEdit = {countryId: this.shippingCountryId};
+            }
+
+            this.updateHeadline();
+            this.addressModal.show();
+        },
+
+        /**
          * Show the add modal
          */
-        showAddModal: function()
+        showAddModal()
         {
             this.modalType = "create";
-            this.addressToEdit = {};
+
+            if (AddressFieldService.isAddressFieldEnabled(this.addressToEdit.countryId, this.addressType, "salutation"))
+            {
+                this.addressToEdit = {
+                    addressSalutation: 0,
+                    gender: "male",
+                    countryId        : this.shippingCountryId
+                };
+            }
+            else
+            {
+                this.addressToEdit = {countryId: this.shippingCountryId};
+            }
+
             this.updateHeadline();
+            ValidationService.unmarkAllFields($(this.$refs.addressModal));
             this.addressModal.show();
         },
 
@@ -152,20 +183,53 @@ Vue.component("address-select", {
          * Show the edit modal
          * @param address
          */
-        showEditModal: function(address)
+        showEditModal(address)
         {
             this.modalType = "update";
-            // Creates a tmp address to prevent unwanted two-way binding
-            this.addressToEdit = JSON.parse(JSON.stringify(address));
+            this.addressToEdit = this.getAddressToEdit(address);
+
+            if (this.addressToEdit.gender === "female")
+            {
+                this.addressToEdit.addressSalutation = 1;
+            }
+            else if (isNull(this.addressToEdit.gender) && this.addressToEdit.name1)
+            {
+                this.addressToEdit.addressSalutation = 2;
+            }
+            else
+            {
+                this.addressToEdit.addressSalutation = 0;
+                this.addressToEdit.gender = "male";
+            }
+
             this.updateHeadline();
+            ValidationService.unmarkAllFields($(this.$refs.addressModal));
             this.addressModal.show();
+        },
+
+        getAddressToEdit(address)
+        {
+            // Creates a tmp address to prevent unwanted two-way binding
+            const addressToEdit = JSON.parse(JSON.stringify(address));
+
+            if (addressToEdit.options)
+            {
+                for (const option of addressToEdit.options)
+                {
+                    const optionName = this.addressOptionTypeFieldMap[option.typeId];
+
+                    addressToEdit[optionName] = option.value || null;
+                }
+            }
+
+            return addressToEdit;
         },
 
         /**
          * Show the delete modal
          * @param address
          */
-        showDeleteModal: function(address)
+        showDeleteModal(address)
         {
             this.modalType = "delete";
             this.addressToDelete = address;
@@ -176,25 +240,28 @@ Vue.component("address-select", {
         /**
          * Delete the address selected before
          */
-        deleteAddress: function()
+        deleteAddress()
         {
-            var self = this;
-            var address = this.addressToDelete;
-            var addressType = this.addressType;
+            this.deleteModalWaiting = true;
 
-            AddressService.deleteAddress(address.id, addressType)
-                .done(function()
-                {
-                    self.closeDeleteModal();
-                    self.removeIdFromList(address.id);
-                });
-
+            this.$store.dispatch("deleteAddress", {address: this.addressToDelete, addressType: this.addressType})
+                .then(
+                    response =>
+                    {
+                        this.closeDeleteModal();
+                        this.deleteModalWaiting = false;
+                    },
+                    error =>
+                    {
+                        this.deleteModalWaiting = false;
+                    }
+                );
         },
 
         /**
          * Close the current create/update address modal
          */
-        closeAddressModal: function()
+        closeAddressModal()
         {
             this.addressModal.hide();
         },
@@ -202,7 +269,7 @@ Vue.component("address-select", {
         /**
          * Close the current delete address modal
          */
-        closeDeleteModal: function()
+        closeDeleteModal()
         {
             this.deleteModal.hide();
         },
@@ -210,76 +277,88 @@ Vue.component("address-select", {
         /**
          * Dynamically create the header line in the modal
          */
-        updateHeadline: function()
+        updateHeadline()
         {
-            var headline;
+            let headline;
 
-            if (this.addressType === "2")
+            if (this.modalType === "initial")
+            {
+                headline = TranslationService.translate("Ceres::Template.addressInvoiceAddressInitial");
+            }
+            else if (this.addressType === "2")
             {
                 if (this.modalType === "update")
                 {
-                    headline = Translations.Template.orderShippingAddressEdit;
+                    headline = TranslationService.translate("Ceres::Template.addressShippingAddressEdit");
                 }
                 else if (this.modalType === "create")
                 {
-                    headline = Translations.Template.orderShippingAddressCreate;
+                    headline = TranslationService.translate("Ceres::Template.addressShippingAddressCreate");
                 }
                 else
                 {
-                    headline = Translations.Template.orderShippingAddressDelete;
+                    headline = TranslationService.translate("Ceres::Template.addressShippingAddressDelete");
                 }
             }
             else if (this.modalType === "update")
             {
-                headline = Translations.Template.orderInvoiceAddressEdit;
+                headline = TranslationService.translate("Ceres::Template.addressInvoiceAddressEdit");
             }
             else if (this.modalType === "create")
             {
-                headline = Translations.Template.orderInvoiceAddressCreate;
+                headline = TranslationService.translate("Ceres::Template.addressInvoiceAddressCreate");
             }
             else
             {
-                headline = Translations.Template.orderInvoiceAddressDelete;
+                headline = TranslationService.translate("Ceres::Template.addressInvoiceAddressDelete");
             }
 
             this.headline = headline;
         },
 
         /**
-         * Remove an address from the addressList by ID
-         * @param id
+         * @param countryId
+         * @returns string
          */
-        removeIdFromList: function(id)
+        getCountryName(countryId)
         {
-            for (var i in this.addressList)
+            if (countryId > 0)
             {
-                if (this.addressList[i].id === id)
+                const country = this.countryList.find(country => country.id === countryId);
+
+                if (!isNullOrUndefined(country))
                 {
-                    this.addressList.splice(i, 1);
+                    return country.currLangName;
+                }
+            }
 
-                    if (this.selectedAddressId && this.selectedAddressId.toString() === id.toString())
+            return "";
+        },
+
+        setAddressToEditField({field, value})
+        {
+            this.addressToEdit[field] = value;
+            this.addressToEdit = Object.assign({}, this.addressToEdit);
+        }
+    },
+
+    filters :
+    {
+        optionType(selectedAddress, typeId)
+        {
+            if (selectedAddress && selectedAddress.name2)
+            {
+                for (const optionType of selectedAddress.options)
+                {
+                    if (optionType.typeId === typeId)
                     {
-                        this.selectedAddress = {};
-                        this.selectedAddressId = "";
-
-                        break;
+                        return optionType.value;
                     }
                 }
             }
-        },
 
-        /**
-         * Update the selected address when a new address is created
-         * @param addressData
-         */
-        onAddressCreated: function(addressData)
-        {
-            if (!this.selectedAddressId)
-            {
-                this.selectedAddressId = addressData.id;
+            return "";
 
-                this.loadSelectedAddress();
-            }
         }
     }
 });

@@ -1,13 +1,50 @@
+import {isNullOrUndefined}from "../helper/utils";
+
 Vue.filter("itemURL", function(item)
 {
+    const enableOldUrlPattern = App.config.global.enableOldUrlPattern;
+    const urlPath = item.texts.urlPath || "";
+    const includeLanguage = !isNullOrUndefined(item.texts.lang) && App.defaultLanguage != item.texts.lang;
 
-    var urlContent = item.texts[0].urlPath.split("/");
-    var i          = urlContent.length - 1;
+    let link = "";
 
-    if (urlContent[i].length > 0)
-    {
-        return "/" + urlContent[i] + "/" + item.variation.itemId + "/" + item.variation.id;
+    if (urlPath.charAt(0) !== "/")
+{
+        link = "/";
     }
-    return "/" + item.variation.itemId + "/" + item.variation.id;
 
+    if (includeLanguage)
+    {
+        link += item.texts.lang + "/";
+    }
+
+    if (urlPath && urlPath.length)
+    {
+        link += urlPath;
+    }
+
+    let suffix = "";
+
+    if (enableOldUrlPattern)
+    {
+        suffix = "/a-" + item.item.id;
+    }
+    else
+    {
+        suffix = "_" + item.item.id + "_" + item.variation.id;
+    }
+
+    let trailingSlash = "";
+
+    if (App.urlTrailingSlash)
+    {
+        trailingSlash = "/";
+    }
+
+    if (link.substr(link.length - suffix.length, suffix.length) === suffix)
+    {
+        return link + trailingSlash;
+    }
+
+    return link + suffix + trailingSlash;
 });

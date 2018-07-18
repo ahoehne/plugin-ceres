@@ -1,60 +1,57 @@
-var ResourceService = require("services/ResourceService");
-var ItemListService = require("services/ItemListService");
-var UrlService = require("services/UrlService");
+import UrlService from "services/UrlService";
 
 Vue.component("items-per-page", {
+
+    delimiters: ["${", "}"],
 
     props: [
         "paginationValues",
         "template"
     ],
 
-    data: function()
+    data()
     {
         return {
-            itemSearch: {}
+            selectedValue: null
         };
     },
 
-    created: function()
+    created()
     {
         this.$options.template = this.template;
-
-        ResourceService.bind("itemSearch", this);
 
         this.setSelectedValueByUrl();
     },
 
     methods:
     {
-        itemsPerPageChanged: function()
+        itemsPerPageChanged()
         {
-            ItemListService.setItemsPerPage(this.itemSearch.items);
-            ItemListService.setPage(1);
-            ItemListService.getItemList();
+            this.$store.dispatch("selectItemsPerPage", this.selectedValue);
         },
 
-        setSelectedValueByUrl: function()
+        setSelectedValueByUrl()
         {
-            var urlParams = UrlService.getUrlParams(document.location.search);
+            const urlParams = UrlService.getUrlParams(document.location.search);
+            const defaultItemsPerPage = App.config.pagination.columnsPerPage * App.config.pagination.rowsPerPage[0];
 
             if (urlParams.items)
             {
-                if (this.paginationValues.indexOf(urlParams.items) > -1)
+                if (this.paginationValues.includes(parseInt(urlParams.items)))
                 {
-                    this.itemSearch.items = urlParams.items;
+                    this.selectedValue = urlParams.items;
                 }
                 else
                 {
-                    this.itemSearch.items = App.config.defaultItemsPerPage;
+                    this.selectedValue = defaultItemsPerPage;
                 }
             }
             else
             {
-                this.itemSearch.items = App.config.defaultItemsPerPage;
+                this.selectedValue = defaultItemsPerPage;
             }
 
-            ItemListService.setItemsPerPage(this.itemSearch.items);
+            this.$store.commit("setItemsPerPage", parseInt(this.selectedValue));
         }
     }
 });

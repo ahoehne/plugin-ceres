@@ -1,34 +1,59 @@
-{% set emailRegex = config("Ceres.register.email_regex") %}
-{% set passwordRegex = config("Ceres.register.password_regex") %}
-
 {{ component( "Ceres::Customer.Components.AddressInputGroup.AddressInputGroup" ) }}
 <script type="x/template" id="vue-registration">
-	<div class="row" id="registration${_uid}">
-        <div class="col-sm-12">
-            <div class="input-unit" data-validate="regex">
-                <input type="text" name="email" id="txt_email" v-model="username" data-validate-ref="{{ emailRegex }}">
-                <label for="txt_email">{{ trans("Ceres::Template.accEmail") }}*</label>
+    <div>
+        <div class="modal-body">
+            <div class="row" :id="'registration' + _uid">
+                <div class="col-sm-12">
+                    <div class="input-unit" data-validate="mail">
+                        {% set uid_mail = uid() %}
+                        <input type="text" name="email" id="{{ uid_mail }}" v-model="username">
+                        <label for="{{ uid_mail }}">{{ trans("Ceres::Template.regEmail") }}*</label>
+                    </div>
+                </div>
+
+                <div class="col-sm-6" v-if="!guestMode">
+                    <div class="input-unit" :class="{'no-bottom media-xs-d': modalElement}" data-validate="password" ref="passwordInput">
+                        <popper v-cloak trigger="focus" placement="left" ref="passwordHint">
+                            {% set uid_pwd = uid() %}
+                            <input slot="handle" type="password" name="password" id="{{ uid_pwd }}" v-model="password">
+                            <div slot="title">
+                                {{ trans("Ceres::Template.regPasswordHintTitle") }}
+                            </div>
+                            <ul slot="content" class="p-l-1">
+                                <li>{{ trans("Ceres::Template.regPasswordHintLength") }}</li>
+                                <li>{{ trans("Ceres::Template.regPasswordHintDigit") }}</li>
+                                <li>{{ trans("Ceres::Template.regPasswordHintChar") }}</li>
+                            </ul>
+                        </popper>
+
+                        <label for="{{ uid_pwd }}">{{ trans("Ceres::Template.regPassword") }}*</label>
+                    </div>
+                </div>
+
+                <div class="col-sm-6 input-unit-group" v-if="!guestMode">
+                    <div class="input-unit" :class="{'no-bottom': modalElement}" data-validate="ref">
+                        {% set uid_pwd_repeat = uid() %}
+                        <input type="password" name="password-repeat" id="{{ uid_pwd_repeat }}" v-model="passwordRepeat" data-validate-ref="#{{ uid_pwd }}">
+                        <label for="{{ uid_pwd_repeat }}">{{ trans("Ceres::Template.regRepeatPassword") }}*</label>
+                    </div>
+                </div>
+
+                <address-input-group
+                    template="#vue-address-input-group"
+                    v-if="!isSimpleRegistration"
+                    address-type="1"
+                    :value="billingAddress"
+                    @input="setAddressDataField($event)">
+                </address-input-group>
             </div>
         </div>
+        <div class="modal-footer">
+            {{ LayoutContainer.show("Ceres::RegistrationOverlay.ExtendOverlayButtons") }}
 
-        <div class="col-sm-6" v-if="!guestMode">
-            <div class="input-unit" id="passwordBox" data-validate="regex">
-                <input type="password" name="password" id="registration_password_input" v-model="password" data-validate-ref="{{ passwordRegex }}">
-                <label for="txt_pw">{{ trans("Ceres::Template.accPassword") }}*</label>
-            </div>
-        </div>
-
-        <div class="col-sm-6" v-if="!guestMode">
-            <div class="input-unit" id="passwordRepeatBox" data-validate="ref">
-                <input type="password" name="password-repeat" id="txt_pwrepeat" v-model="passwordRepeat" data-validate-ref="#registration_password_input">
-                <label for="txt_pwrepeat">{{ trans("Ceres::Template.accRepeatPassword") }}*</label>
-            </div>
-        </div>
-
-        <address-input-group template="#vue-address-input-group" v-if="!isSimpleRegistration" :address-data.sync="billingAddress"></address-input-group>
-
-        <div class="col-sm-5 offset-sm-7">
-            <button @click="validateRegistration" :disabled="isDisabled" class="btn btn-primary btn-block">{{ trans("Ceres::Template.accRegister") }}</button>
+            <button @click="validateRegistration" :disabled="isDisabled" class="btn btn-primary btn-medium btn-right">
+                <i class="fa fa-user-plus" v-waiting-animation="isDisabled" aria-hidden="true"></i> 
+                {{ trans("Ceres::Template.regRegister") }}
+            </button>
         </div>
     </div>
 </script>

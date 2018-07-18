@@ -1,36 +1,53 @@
-var ResourceService = require("services/ResourceService");
-
 Vue.component("invoice-address-select", {
 
-    template: "<address-select template=\"#vue-address-select\" v-on:address-changed=\"addressChanged\" address-type=\"1\" :address-list=\"addressList\" :selected-address-id=\"selectedAddressId\" :show-error='checkoutValidation.invoiceAddress.showError'></address-select>",
+    delimiters: ["${", "}"],
+
+    template: `
+        <address-select 
+            ref="invoice"
+            template="#vue-address-select"
+            v-on:address-changed="addressChanged"
+            address-type="1"
+            :show-error='showError'>
+        </address-select>
+    `,
 
     props: [
+        "selectedAddressId",
         "addressList",
-        "hasToValidate",
-        "selectedAddressId"
+        "hasToValidate"
     ],
 
-    data: function()
-    {
-        return {
-            checkout: {},
-            checkoutValidation: {invoiceAddress: {}}
-        };
-    },
+    computed: Vuex.mapState({
+        billingAddressId: state => state.address.billingAddressId,
+        showError: state => state.checkout.validation.invoiceAddress.showError
+    }),
 
     /**
      * Initialise the event listener
      */
-    created: function()
+    created()
     {
-        ResourceService.bind("checkout", this);
+        this.$store.dispatch("initBillingAddress", {id: this.selectedAddressId, addressList: this.addressList});
 
         if (this.hasToValidate)
         {
-            ResourceService.bind("checkoutValidation", this);
-
-            this.checkoutValidation.invoiceAddress.validate = this.validate;
+            this.$store.commit("setInvoiceAddressValidator", this.validate);
         }
+    },
+
+    /**
+     * If no address is related to the user, a popup will open to add an address
+     */
+    mounted()
+    {
+        this.$nextTick(() =>
+        {
+            if (App.isCheckoutView && this.addressList && this.addressList.length <= 0)
+            {
+                this.$refs.invoice.showInitialAddModal();
+            }
+        });
     },
 
     methods:
@@ -39,16 +56,18 @@ Vue.component("invoice-address-select", {
          * Update the invoice address
          * @param selectedAddress
          */
-        addressChanged: function(selectedAddress)
+        addressChanged(selectedAddress)
         {
-            this.checkout.billingAddressId = selectedAddress.id;
-
-            ResourceService.getResource("checkout")
-                .set(this.checkout)
-                .done(function()
+            this.$store.dispatch("selectAddress", {selectedAddress, addressType: "1"})
+                .then(
+                response =>
                 {
-                    document.dispatchEvent(new CustomEvent("afterInvoiceAddressChanged", {detail: this.checkout.billingAddressId}));
-                }.bind(this));
+                    document.dispatchEvent(new CustomEvent("afterInvoiceAddressChanged", {detail: this.billingAddressId}));
+                },
+                error =>
+                {
+
+                });
 
             if (this.hasToValidate)
             {
@@ -56,9 +75,20 @@ Vue.component("invoice-address-select", {
             }
         },
 
-        validate: function()
+        validate()
         {
-            this.checkoutValidation.invoiceAddress.showError = this.checkout.billingAddressId <= 0;
+            this.$store.commit("setInvoiceAddressShowError", this.billingAddressId <= 0);
+        }
+    },
+
+    watch:
+    {
+        billingAddressId()
+        {
+            if (this.hasToValidate && this.showError)
+            {
+                this.validate();
+            }
         }
     }
 });

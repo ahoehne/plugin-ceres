@@ -1,60 +1,88 @@
-var ResourceService = require("services/ResourceService");
-var ItemListService = require("services/ItemListService");
-var UrlService = require("services/UrlService");
+import UrlService from "services/UrlService";
+import TranslationService from "services/TranslationService";
 
 Vue.component("item-search", {
+
+    delimiters: ["${", "}"],
 
     props: [
         "template"
     ],
 
-    data: function()
+    data()
     {
         return {
-            searchString: "",
-            itemSearch: {}
+            currentSearchString: "",
+            preventSearch: false
         };
     },
 
-    created: function()
+    computed: Vuex.mapState({
+        searchString: state => state.itemList.searchString
+    }),
+
+    created()
     {
         this.$options.template = this.template;
     },
 
-    ready: function()
+    mounted()
     {
-        ResourceService.bind("itemSearch", this);
-        this.initAutocomplete();
-
-        var urlParams = UrlService.getUrlParams(document.location.search);
-
-        this.itemSearch.query = urlParams.query;
-
-        if (this.itemSearch.query)
+        this.$nextTick(() =>
         {
-            ItemListService.updateSearchString(this.itemSearch.query);
-        }
+            this.initAutocomplete();
+
+            const urlParams = UrlService.getUrlParams(document.location.search);
+
+            this.$store.commit("setItemListSearchString", urlParams.query);
+            this.currentSearchString = urlParams.query;
+        });
     },
 
     methods:
     {
-        search: function()
-        {
-            if (document.location.pathname === "/search")
+        search()
             {
-                ItemListService.setSearchString(this.itemSearch.query);
-                ItemListService.getItemList();
+            if (this.currentSearchString.length &&
+                    !this.preventSearch)
+                {
+                if (document.location.pathname === "/search")
+                    {
+                    this.updateTitle(this.currentSearchString);
+                    this.$store.dispatch("searchItems", this.currentSearchString);
+                }
+                else
+                    {
+                    var searchBaseURL = "/search?query=";
+
+                    if (App.defaultLanguage != App.language)
+                    {
+                        searchBaseURL = "/" + App.language + "/search?query=";
+                    }
+
+                    window.open(searchBaseURL + this.currentSearchString, "_self", false);
+                }
             }
             else
-            {
-                window.open("/search?query=" + this.itemSearch.query, "_self", false);
+                {
+                this.preventSearch = false;
             }
         },
 
-        initAutocomplete: function()
-        {
-            var self = this;
+        openItem(suggestion)
+            {
+            this.preventSearch = true;
+            window.open(this.$options.filters.itemURL(suggestion.data), "_self", false);
+        },
 
+        updateTitle(searchString)
+            {
+            document.querySelector("#searchPageTitle").innerHTML = TranslationService.translate("Ceres::Template.itemSearchResults") + " " + searchString;
+            document.title = TranslationService.translate("Ceres::Template.itemSearchResults") + " " + searchString + " | " + App.config.header.companyName;
+        },
+
+        initAutocomplete()
+            {
             $(".search-input").autocomplete({
                 serviceUrl: "/rest/io/item/search/autocomplete",
                 paramName: "query",
@@ -64,39 +92,48 @@ Vue.component("item-search", {
                 maxHeight: 310,
                 minChars: 2,
                 preventBadQueries: false,
-                onSelect: function(suggestion)
-                {
-                    self.itemSearch.query = suggestion.value;
-                    self.search();
+                onSelect: suggestion =>
+                    {
+                    this.$store.commit("setItemListSearchString", suggestion.value);
+                    this.currentSearchString = suggestion.value;
+
+                    if (App.config.search.forwardToSingleItem)
+                        {
+                        this.openItem(suggestion);
+                    }
+                    else
+                        {
+                        this.search();
+                    }
                 },
-                beforeRender: function()
-                {
+                beforeRender()
+                    {
                     $(".autocomplete-suggestions").width($(".search-box-shadow-frame").width());
                 },
-                transformResult: function(response)
-                {
-                    return self.transformSuggestionResult(response);
+                transformResult: response =>
+                    {
+                    return this.transformSuggestionResult(response);
                 }
             });
 
-            $(window).resize(function()
-            {
+            $(window).resize(() =>
+                {
                 $(".autocomplete-suggestions").width($(".search-box-shadow-frame").width());
             });
         },
 
-        transformSuggestionResult: function(result)
-        {
+        transformSuggestionResult(result)
+            {
             result = JSON.parse(result);
-            var suggestions =
+            const suggestions =
                 {
-                    suggestions: $.map(result.data.documents, function(dataItem)
-                    {
-                        var value = dataItem.data.texts[0].name1;
+                    suggestions: $.map(result.data.documents, dataItem =>
+                        {
+                        const value = this.$options.filters.itemName(dataItem.data);
 
                         return {
                             value: value,
-                            data : value
+                            data : dataItem.data
                         };
                     })
                 };

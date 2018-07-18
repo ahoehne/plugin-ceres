@@ -1,6 +1,10 @@
+import {isNullOrUndefined}from "../../helper/utils";
+
 var NotificationService = require("services/NotificationService");
 
 Vue.component("notifications", {
+
+    delimiters: ["${", "}"],
 
     props: [
         "initialNotifications",
@@ -19,17 +23,18 @@ Vue.component("notifications", {
         this.$options.template = this.template;
     },
 
-    ready: function()
+    mounted: function()
     {
-        var self = this;
+        this.$nextTick(() =>
+        {
+            NotificationService.listen(
+                notifications =>
+                {
+                    Vue.set(this, "notifications", notifications);
+                });
 
-        NotificationService.listen(
-            function(notifications)
-            {
-                self.$set("notifications", notifications);
-            });
-
-        self.showInitialNotifications();
+            this.showInitialNotifications();
+        });
     },
 
     methods : {
@@ -47,24 +52,24 @@ Vue.component("notifications", {
          */
         showInitialNotifications: function()
         {
-            for (var key in this.initialNotifications)
+            for (const type in this.initialNotifications)
             {
-                // set default type top 'log'
-                var type = this.initialNotifications[key].type || "log";
-                var message = this.initialNotifications[key].message;
+                const notification = this.initialNotifications[type];
+
+                if (isNullOrUndefined(notification))
+                {
+                    continue;
+                }
 
                 // type cannot be undefined
-                if (message)
+                if (!isNullOrUndefined(NotificationService[type]) && typeof NotificationService[type] === "function")
                 {
-                    if (NotificationService[type] && typeof NotificationService[type] === "function")
-                    {
-                        NotificationService[type](message);
-                    }
-                    else
-                    {
-                        // unkown type
-                        NotificationService.log(message);
-                    }
+                    NotificationService[type](notification);
+                }
+                else
+                {
+                    // unkown type
+                    NotificationService.log(notification);
                 }
             }
         }

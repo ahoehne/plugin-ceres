@@ -6,13 +6,17 @@
 // Variables
 // --------------------------------------------------
 
+// Root directory
+
+$root-directory: '..' !default;
+
 // Flags settings
-$flag-icon-css-path: '../images/flags' !default;
+$flag-icon-css-path: '#{$root-directory}/images/flags' !default;
 $flag-icon-rect-path: '/4x3' !default;
 $flag-icon-square-path: '/1x1' !default;
 
 //font awesome
-$fa-font-path: "../documents/fonts" !default;
+$fa-font-path: "#{$root-directory}/documents/fonts" !default;
 
 // Spacing
 //
@@ -70,7 +74,6 @@ $grid-gutter-width: 30px !default;
 //
 //## Gray and brand colors for use across Bootstrap.
 
-
 $gray-darker:           #282d2f !default;
 $gray-dark:             #4D4F4D !default;
 $gray:                  #7a7f7f !default;
@@ -111,6 +114,11 @@ $availability_2:        $brand-success !default;
 $availability_3:        $brand-warning !default;
 $availability_4:        $brand-warning !default;
 $availability_5:        $brand-danger !default;
+$availability_6:        $brand-danger !default;
+$availability_7:        $brand-danger !default;
+$availability_8:        $brand-danger !default;
+$availability_9:        $gray-dark !default;
+$availability_10:       $gray-dark !default;
 
 
 //== Scaffolding
@@ -133,11 +141,10 @@ $link-hover-color:      darken($link-color, 15%) !default;
 //
 // Settings for the `<body>` element.
 
-
 //== Typography
 //
 //## Font, line-height, and color for body text, headings, and more.
-$font-family-sans-serif:'Open Sans', Helvetica, Arial, sans-serif !default;
+$font-family-sans-serif:Custom-Font, Helvetica, Arial, sans-serif !default;
 $font-family-helvetica: $font-family-sans-serif !default;
 $font-family-serif:     Georgia, "Times New Roman", Times, serif !default;
 //** Default monospace fonts for `<code>`, `<kbd>`, and `<pre>`.
@@ -226,7 +233,7 @@ $caret-width-lg:         $caret-width !default;
 
 
 //Ceres 4 variables
-$aside-columns-width: 25em !default;
+$aside-columns-width: 30em !default;
 
 
 // Tables
@@ -805,3 +812,8 @@ $pre-bg:                      #f7f7f9 !default;
 $pre-color:                   $gray-dark !default;
 $pre-border-color:            #ccc !default;
 $pre-scrollable-max-height:   340px !default;
+
+
+// Category
+
+$category-text-color:         #fff !default;

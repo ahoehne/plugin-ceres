@@ -1,10 +1,20 @@
+const browserDetect = require("detect-browser");
 // Frontend end scripts
 // eslint-disable-next-line
 var init = (function($, window, document)
 {
-
     function CeresMain()
     {
+        const browser = browserDetect.detect();
+
+        if (browser && browser.name)
+        {
+            $("html").addClass(browser.name);
+        }
+        else
+        {
+            $("html").addClass("unkown-os");
+        }
 
         $(window).scroll(function()
         {
@@ -20,6 +30,14 @@ var init = (function($, window, document)
                 }
             }
         });
+
+        window.onpopstate = function(event)
+        {
+            if (event.state && event.state.requireReload)
+            {
+                window.location.reload();
+            }
+        };
 
         // init bootstrap tooltips
         $("[data-toggle=\"tooltip\"]").tooltip();
@@ -50,64 +68,45 @@ var init = (function($, window, document)
             }, "xml");
         });
 
-        // Sticky sidebar single item
-        if (window.matchMedia("(min-width: 768px)").matches)
-        {
-            var $singleRightside = $(".single-rightside");
-            var $headHeight = $(".top-bar").height();
-
-            $singleRightside.stick_in_parent({offset_top: $headHeight + 10});
-
-            $singleRightside.on("sticky_kit:bottom", function()
-            {
-                $(this).parent().css("position", "static");
-            })
-                .on("sticky_kit:unbottom", function()
-                {
-                    $(this).parent().css("position", "relative");
-                });
-        }
-
         var $toggleListView = $(".toggle-list-view");
         var $mainNavbarCollapse = $("#mainNavbarCollapse");
 
-        setTimeout(function()
+        $(document).on("click", function(evt)
         {
-            var $toggleBasketPreview = $("#toggleBasketPreview, #closeBasketPreview");
+            const basketOpenClass = (App.config.basket.previewType === "right") ? "open-right" : "open-hover";
 
-            $toggleBasketPreview.on("click", function(evt)
+            if ($("#vue-app").hasClass(basketOpenClass))
             {
-                evt.preventDefault();
-                evt.stopPropagation();
-                $("body").toggleClass("open-right");
-            });
-        }, 1);
-
-        $(document).on("click", "body.open-right", function(evt)
-        {
-            if ($("body").hasClass("open-right"))
-            {
-                if ((evt.target != $(".basket-preview")) && ($(evt.target).parents(".basket-preview").length <= 0))
+                if ((evt.target != $(".basket-preview")) &&
+                    (evt.target != document.querySelector(".basket-preview-hover")) &&
+                    (evt.target.classList[0] != "message") &&
+                    ($(evt.target).parents(".basket-preview").length <= 0 && $(evt.target).parents(".basket-preview-hover").length <= 0))
                 {
                     evt.preventDefault();
-                    $("body").toggleClass("open-right");
+                    $("#vue-app").toggleClass(basketOpenClass || "open-hover");
                 }
             }
-        });
 
-        $("#detlef").on("click", function()
-        {
-            $("html, body").animate({scrollTop: 0}, "slow");
-        });
+            if ((evt.target.id != "countrySettings") &&
+                ($(evt.target).parents("#countrySettings").length <= 0) &&
+                ($("#countrySettings").attr("aria-expanded") == "true"))
+            {
+                $("#countrySettings").collapse("hide");
+            }
 
-        $("#searchBox").on("show.bs.collapse", function()
-        {
-            $("#countrySettings").collapse("hide");
-        });
+            if ((evt.target.id != "searchBox") &&
+                ($(evt.target).parents("#searchBox").length <= 0) &&
+                ($("#searchBox").attr("aria-expanded") == "true"))
+            {
+                $("#searchBox").collapse("hide");
+            }
 
-        $("#countrySettings").on("show.bs.collapse", function()
-        {
-            $("#searchBox").collapse("hide");
+            if ((evt.target.id != "currencySelect") &&
+                ($(evt.target).parents("#currencySelect").length <= 0) &&
+                ($("#currencySelect").attr("aria-expanded") == "true"))
+            {
+                $("#currencySelect").collapse("hide");
+            }
         });
 
         $toggleListView.on("click", function(evt)
@@ -139,25 +138,58 @@ var init = (function($, window, document)
             $("#mainNavbarCollapse").collapse("hide");
         }
 
-        // initialize lazyload for articles
-        $("img.lazy").show().lazyload({
-            effect: "fadeIn"
-        });
-        // test, to delete
-        $("img.testtest").show().lazyload({
-            effect : "fadeIn"
-        });
-
-        $(".cmp-product-thumb").on("mouseover", function(event)
+        $(document).ready(function()
         {
-            $(this).find("img").each(function(i, img)
-            {
-                var $img = $(img);
+            var offset = 250;
+            var duration = 300;
 
-                if (!$img.attr("src"))
+            var isDesktop = window.matchMedia("(min-width: 768px)").matches;
+
+            $(window).scroll(function()
+            {
+                if (isDesktop)
                 {
-                    $(img).lazyload();
+                    if ($(this).scrollTop() > offset)
+                    {
+                        $(".back-to-top").fadeIn(duration);
+                        $(".back-to-top-center").fadeIn(duration);
+                    }
+                    else
+                    {
+                        $(".back-to-top").fadeOut(duration);
+                        $(".back-to-top-center").fadeOut(duration);
+                    }
                 }
+            });
+
+            window.addEventListener("resize", function()
+            {
+                isDesktop = window.matchMedia("(min-width: 768px)").matches;
+            });
+
+            $(".back-to-top").click(function(event)
+            {
+                event.preventDefault();
+
+                $("html, body").animate({scrollTop: 0}, duration);
+
+                return false;
+            });
+
+            $(".back-to-top-center").click(function(event)
+            {
+                event.preventDefault();
+
+                $("html, body").animate({scrollTop: 0}, duration);
+
+                return false;
+            });
+
+            $("#accountMenuList").click(function()
+            {
+                $("#countrySettings").collapse("hide");
+                $("#searchBox").collapse("hide");
+                $("#currencySelect").collapse("hide");
             });
         });
     }

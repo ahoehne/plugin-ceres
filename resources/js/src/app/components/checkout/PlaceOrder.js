@@ -1,132 +1,148 @@
 var ApiService = require("services/ApiService");
 var NotificationService = require("services/NotificationService");
-var ResourceService = require("services/ResourceService");
 
-(function($)
-{
-    Vue.component("place-order", {
+import TranslationService from "services/TranslationService";
+import {navigateTo}from "services/UrlService";
 
-        props: [
-            "targetContinue",
-            "template"
-        ],
+Vue.component("place-order", {
 
-        data: function()
+    delimiters: ["${", "}"],
+
+    props: [
+        "targetContinue",
+        "template"
+    ],
+
+    data()
+    {
+        return {
+            waiting: false
+        };
+    },
+
+    computed: Vuex.mapState({
+        checkoutValidation: state => state.checkout.validation,
+        contactWish: state => state.checkout.contactWish,
+        isBasketLoading: state => state.basket.isBasketLoading,
+        basketItemQuantity: state => state.basket.data.itemQuantity,
+        isBasketInitiallyLoaded: state => state.basket.isBasketInitiallyLoaded,
+        shippingPrivacyHintAccepted: state => state.checkout.shippingPrivacyHintAccepted
+    }),
+
+    created()
+    {
+        this.$options.template = this.template;
+    },
+
+    methods: {
+        placeOrder()
         {
-            return {
-                waiting: false,
-                checkout: {},
-                checkoutValidation: {}
-            };
+            this.waiting = true;
+
+            const url = "/rest/io/order/additional_information";
+            const params = {orderContactWish: this.contactWish, shippingPrivacyHintAccepted: this.shippingPrivacyHintAccepted};
+            const options = {supressNotifications: true};
+
+            ApiService.post(url, params, options)
+                .always(() =>
+                {
+                    this.preparePayment();
+                });
         },
 
-        created: function()
+        preparePayment()
         {
-            this.$options.template = this.template;
+            this.waiting = true;
 
-            ResourceService.bind("checkout", this);
-            ResourceService.bind("checkoutValidation", this);
+            if (this.validateCheckout() && this.basketItemQuantity > 0)
+            {
+                ApiService.post("/rest/io/checkout/payment")
+                    .done(response =>
+                    {
+                        this.afterPreparePayment(response);
+                    })
+                    .fail(error =>
+                    {
+                        this.waiting = false;
+                    });
+            }
+            else
+            {
+                NotificationService.error(
+                    TranslationService.translate("Ceres::Template.checkoutCheckEntries")
+                );
+                this.waiting = false;
+            }
         },
 
-        methods: {
+        validateCheckout()
+        {
+            let isValid = true;
 
-            preparePayment: function()
+            for (const index in this.checkoutValidation)
             {
-                this.waiting = true;
-                var self = this;
+                if (this.checkoutValidation[index].validate)
+                {
+                    this.checkoutValidation[index].validate();
 
-                if (self.validateCheckout())
-                {
-                    ApiService.post("/rest/io/checkout/payment")
-                        .done(function(response)
-                        {
-                            self.afterPreparePayment(response);
-                        })
-                        .fail(function(response)
-                        {
-                            self.waiting = false;
-                        });
-                }
-                else
-                {
-                    NotificationService.error(Translations.Template.generalCheckEntries);
-                    this.waiting = false;
-                }
-            },
-
-            validateCheckout: function()
-            {
-                for (var validator in this.checkoutValidation)
-                {
-                    if (this.checkoutValidation[validator].validate)
+                    if (this.checkoutValidation[index].showError)
                     {
-                        this.checkoutValidation[validator].validate();
+                        isValid = !this.checkoutValidation[index].showError;
                     }
                 }
+            }
 
-                for (var i in this.checkoutValidation)
-                {
-                    if (this.checkoutValidation[i].showError)
-                    {
-                        return false;
-                    }
-                }
+            return isValid;
+        },
 
-                return true;
-            },
+        afterPreparePayment(response)
+        {
+            var paymentType = response.type || "errorCode";
+            var paymentValue = response.value || "";
 
-            afterPreparePayment: function(response)
+            switch (paymentType)
             {
-                var paymentType = response.type || "errorCode";
-                var paymentValue = response.value || "";
+            case "continue":
+                var target = this.targetContinue;
 
-                switch (paymentType)
+                if (target)
                 {
-                case "continue":
-                    var target = this.targetContinue;
-
-                    if (target)
-                        {
-                        window.location.assign(target);
-                    }
-                    break;
-                case "redirectUrl":
-                        // redirect to given payment provider
-                    window.location.assign(paymentValue);
-                    break;
-                case "externalContentUrl":
-                        // show external content in iframe
-                    this.showModal(paymentValue, true);
-                    break;
-                case "htmlContent":
-                    this.showModal(paymentValue, false);
-                    break;
-
-                case "errorCode":
-                    NotificationService.error(paymentValue);
-                    break;
-                default:
-                    NotificationService.error("Unknown response from payment provider: " + paymentType);
-                    break;
+                    navigateTo(target);
                 }
-            },
+                break;
+            case "redirectUrl":
+                    // redirect to given payment provider
+                window.location.assign(paymentValue);
+                break;
+            case "externalContentUrl":
+                    // show external content in iframe
+                this.showModal(paymentValue, true);
+                break;
+            case "htmlContent":
+                this.showModal(paymentValue, false);
+                break;
 
-            showModal: function(content, isExternalContent)
+            case "errorCode":
+                NotificationService.error(paymentValue);
+                this.waiting = false;
+                break;
+            default:
+                NotificationService.error("Unknown response from payment provider: " + paymentType);
+                this.waiting = false;
+                break;
+            }
+        },
+
+        showModal(content, isExternalContent)
+        {
+            if (isExternalContent)
             {
-                var $modal = $(this.$els.modal);
-                var $modalBody = $(this.$els.modalContent);
-
-                if (isExternalContent)
-                {
-                    $modalBody.html("<iframe src=\"" + content + "\">");
-                }
-                else
-                {
-                    $modalBody.html(content);
-                }
-
-                $modal.modal("show");
+                this.$emit("payment-response", "<iframe src=\"" + content + "\">");
+            }
+            else
+            {
+                this.$emit("payment-response", content);
             }
         }
-    });
-})(jQuery);
+    }
+});

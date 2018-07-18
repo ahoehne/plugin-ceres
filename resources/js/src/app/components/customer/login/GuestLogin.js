@@ -1,7 +1,11 @@
-var ValidationService = require("services/ValidationService");
+import ValidationService from "services/ValidationService";
+import {navigateTo}from "services/UrlService";
+
 var ApiService = require("services/ApiService");
 
 Vue.component("guest-login", {
+
+    delimiters: ["${", "}"],
 
     props: [
         "template",
@@ -44,10 +48,13 @@ Vue.component("guest-login", {
                 {
                     if (this.backlink !== null && this.backlink)
                     {
-                        window.location.assign(this.backlink);
+                        navigateTo(decodeURIComponent(this.backlink));
+                    }
+                    else
+                    {
+                        this.isDisabled = false;
                     }
 
-                    this.isDisabled = false;
                 }.bind(this));
         }
     }

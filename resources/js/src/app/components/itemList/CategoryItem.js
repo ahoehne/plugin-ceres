@@ -1,5 +1,7 @@
 Vue.component("category-item", {
 
+    delimiters: ["${", "}"],
+
     template: "#vue-category-item",
 
     props: [
@@ -8,7 +10,7 @@ Vue.component("category-item", {
         "imageUrlAccessor"
     ],
 
-    data: function()
+    data()
     {
         return {
             recommendedRetailPrice: 0,
@@ -16,18 +18,12 @@ Vue.component("category-item", {
         };
     },
 
-    created: function()
-    {
-        this.recommendedRetailPrice = this.itemData.calculatedPrices.rrp.price;
-        this.variationRetailPrice = this.itemData.calculatedPrices.default.price;
-    },
-
     computed:
     {
         /**
          * returns itemData.item.storeSpecial
          */
-        storeSpecial: function()
+        storeSpecial()
         {
             return this.itemData.item.storeSpecial;
         },
@@ -35,9 +31,36 @@ Vue.component("category-item", {
         /**
          * returns itemData.texts[0]
          */
-        texts: function()
+        texts()
         {
-            return this.itemData.texts[0];
+            return this.itemData.texts;
+        },
+
+        ...Vuex.mapState({
+            showNetPrices: state => state.basket.showNetPrices
+        })
+    },
+
+    created()
+    {
+        if (this.itemData.prices.rrp)
+        {
+            this.recommendedRetailPrice = this.itemData.prices.rrp.price.value;
+        }
+        this.variationRetailPrice = this.itemData.prices.default.price.value;
+    },
+
+    methods:
+    {
+        loadFirstImage()
+        {
+            const categoryImageCarousel = this.$refs.categoryImageCarousel;
+
+            if (categoryImageCarousel)
+            {
+                categoryImageCarousel.loadFirstImage();
+            }
         }
     }
+
 });

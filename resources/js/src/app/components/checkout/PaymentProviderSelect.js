@@ -1,64 +1,49 @@
-var ResourceService = require("services/ResourceService");
-
 Vue.component("payment-provider-select", {
+
+    delimiters: ["${", "}"],
 
     props: [
         "template"
     ],
 
-    data: function()
-    {
-        return {
-            checkout: {},
-            checkoutValidation: {paymentProvider: {}}
-        };
-    },
+    computed: Vuex.mapState({
+        methodOfPaymentList: state => state.checkout.payment.methodOfPaymentList,
+        methodOfPaymentId: state => state.checkout.payment.methodOfPaymentId,
+        showError: state => state.checkout.validation.paymentProvider.showError,
+        isBasketLoading: state => state.basket.isBasketLoading
+    }),
 
     /**
      * Initialise the event listener
      */
-    created: function()
+    created()
     {
         this.$options.template = this.template;
-
-        ResourceService.bind("checkout", this);
-        ResourceService.bind("checkoutValidation", this);
-
-        this.checkoutValidation.paymentProvider.validate = this.validate;
-
-        this.initDefaultPaymentProvider();
+        this.$store.commit("setPaymentProviderValidator", this.validate);
     },
 
     methods: {
         /**
          * Event when changing the payment provider
          */
-        onPaymentProviderChange: function()
+        onPaymentProviderChange(newMethodOfPayment)
         {
-            ResourceService.getResource("checkout")
-                .set(this.checkout)
-                .done(function()
+            this.$store.dispatch("selectMethodOfPayment", newMethodOfPayment.id)
+                .then(data =>
                 {
-                    document.dispatchEvent(new CustomEvent("afterPaymentMethodChanged", {detail: this.checkout.methodOfPaymentId}));
-                }.bind(this));
+                    document.dispatchEvent(new CustomEvent("afterPaymentMethodChanged", {detail: this.methodOfPaymentId}));
+                },
+                error =>
+                {
+                    console.log("error");
+                });
 
             this.validate();
         },
 
-        validate: function()
+        validate()
         {
-            this.checkoutValidation.paymentProvider.showError = !(this.checkout.methodOfPaymentId > 0);
-        },
-
-        initDefaultPaymentProvider: function()
-        {
-            // todo get entry from config | select first payment provider
-            if (this.checkout.methodOfPaymentId == 0 && this.checkout.paymentDataList.length > 0)
-            {
-                this.checkout.methodOfPaymentId = this.checkout.paymentDataList[0].id;
-
-                ResourceService.getResource("checkout").set(this.checkout);
-            }
+            this.$store.commit("setPaymentProviderShowError", !(this.methodOfPaymentId > 0));
         }
     }
 });

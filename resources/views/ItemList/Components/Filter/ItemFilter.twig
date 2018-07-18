@@ -1,12 +1,17 @@
 <script type="x/template" id="vue-item-filter">
-    <div class="card">
-        <h3>${facet.names[0].name}</h3>
-        <div class="form-check" v-for="value in facet.values | orderBy 'id' -1">
-            <input id="option-${ value.id }" class="form-check-input hidden-xs-up" type="checkbox" :value="value.id.toString()" v-model="facetParams" @change="updateFacet" :disabled="isLoading">
-            <label for="option-${ value.id }" class="form-check-label">
-                ${ value.names[0].name }
-            </label>
-            <div class="filter-badge">${ value.total }</div>
+    <div v-if="facet.name" class="card">
+        <div class="h3">${facet.name}</div>
+        <div v-if="facet.type === 'price'">
+            <item-filter-price></item-filter-price>
+        </div>
+        <div v-else>
+            <div class="form-check" v-for="value in facets" :key="value.id">
+                <input :id="'option-' + value.id" class="form-check-input hidden-xs-up" type="checkbox" :checked="isSelected(value.id)" @change="updateFacet(value)" :disabled="isLoading">
+                <label :for="'option-' + value.id" class="form-check-label">
+                    ${ value.name }
+                </label>
+                <div class="filter-badge">${ value.count }</div>
+            </div>
         </div>
     </div>
 </script>

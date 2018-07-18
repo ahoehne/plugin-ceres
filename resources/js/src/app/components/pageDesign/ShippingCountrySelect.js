@@ -1,30 +1,45 @@
-var ResourceService = require("services/ResourceService");
-
 Vue.component("shipping-country-select", {
 
-    props: [
-        "countryFlagPrefix",
-        "template"
-    ],
-
-    data: function()
+    props:
     {
-        return {
-            localization: {}
-        };
+        template:
+        {
+            type: String,
+            default: "#vue-shipping-country-select"
+        },
+
+        disableInput:
+        {
+            type: Boolean
+        }
     },
 
-    created: function()
+    created()
     {
         this.$options.template = this.template;
+    },
 
-        ResourceService.bind("localization", this);
-
-        for (var i in this.localization.activeShippingCountries)
+    computed:
+    {
+        isDisabled()
         {
-            var country = this.localization.activeShippingCountries[i];
+            return !!this.basket.customerInvoiceAddressId || !!this.basket.customerShippingAddressId || this.disableInput;
+        },
 
-            country.countryFlagClass = this.countryFlagPrefix + country.isoCode2.toLowerCase();
+        ...Vuex.mapState({
+            localization: state => state.localization,
+            basket: state => state.basket.data
+        })
+    },
+
+    methods:
+    {
+        setShippingCountry(id)
+        {
+            if (!this.isDisabled)
+            {
+                this.$store.dispatch("selectShippingCountry", id);
+            }
         }
     }
 });

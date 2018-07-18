@@ -1,7 +1,6 @@
-var ResourceService = require("services/ResourceService");
-var accounting = require("accounting");
-
 Vue.component("item-store-special", {
+
+    delimiters: ["${", "}"],
 
     template: "#vue-item-store-special",
 
@@ -9,68 +8,52 @@ Vue.component("item-store-special", {
         "storeSpecial",
         "recommendedRetailPrice",
         "variationRetailPrice",
-        "decimalCount"
+        "decimalCount",
+        "bundleType"
     ],
 
-    data: function()
+    data()
     {
         return {
-            tagClassPrefix: "bg-",
-            localization  : {}
+            tagClass: "",
+            label: "",
+            tagClasses:
+            {
+                1: "bg-danger",
+                2: "bg-primary",
+                default: "bg-success"
+            }
         };
     },
 
-    created: function()
+    created()
     {
-        ResourceService.bind("localization", this);
+        this.tagClass = this.tagClasses[this.storeSpecial.id] || this.tagClasses.default;
+        this.label = this.getLabel();
     },
 
     methods: {
-        getPercentageSale: function()
+        getLabel()
         {
-            var percent = 100 - (this.recommendedRetailPrice / this.variationRetailPrice * 100);
-
-            return accounting.formatNumber(percent, this.decimalCount, "");
-        }
-    },
-
-    computed: {
-        label: function()
-        {
-            if (this.storeSpecial.id === 1)
+            if (this.storeSpecial.id === 1 && this.recommendedRetailPrice)
             {
-                var percent = this.getPercentageSale();
+                const percent = this.getPercentageSale();
 
-                if (percent <= 0)
+                if (parseInt(percent) < 0)
                 {
                     return percent + "%";
                 }
             }
 
-            for (var i in this.storeSpecial.names)
-            {
-                var name = this.storeSpecial.names[i];
-
-                if (name.lang === this.localization.shopLanguage)
-                {
-                    return name.name;
-                }
-            }
-
-            return this.storeSpecial.names[0].name;
+            return this.storeSpecial.names.name;
         },
 
-        tagClass: function()
+        getPercentageSale()
         {
-            if (this.storeSpecial.id === 1)
-            {
-                return this.tagClassPrefix + "danger";
-            }
-            else if (this.storeSpecial.id === 2)
-            {
-                return this.tagClassPrefix + "primary";
-            }
-            return this.tagClassPrefix + "success";
+            // eslint-disable-next-line
+            let percent = (1 - this.variationRetailPrice.unitPrice.value / this.recommendedRetailPrice.price.value ) * -100;
+
+            return percent.toFixed(this.decimalCount).replace(".", App.decimalSeparator);
         }
     }
 });

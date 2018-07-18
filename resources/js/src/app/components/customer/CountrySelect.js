@@ -1,53 +1,63 @@
 var CountryService = require("services/CountryService");
-var ResourceService = require("services/ResourceService");
 
 Vue.component("country-select", {
 
+    delimiters: ["${", "}"],
+
     props: [
         "countryList",
-        "countryNameMap",
         "selectedCountryId",
         "selectedStateId",
-        "template"
+        "template",
+        "addressType"
     ],
 
-    data: function()
+    data()
     {
         return {
             stateList  : [],
-            selectedCountry: {},
-            localization: {}
+            selectedCountry: {}
         };
     },
+
+    computed: Vuex.mapState({
+        shippingCountryId: state => state.localization.shippingCountryId
+    }),
 
     /**
      * Get the shipping countries
      */
-    created: function()
+    created()
     {
         this.$options.template = this.template;
 
-        ResourceService.bind("localization", this);
-        this.selectedCountryId = this.selectedCountryId || this.localization.currentShippingCountryId;
-
-        CountryService.translateCountryNames(this.countryNameMap, this.countryList);
         CountryService.sortCountries(this.countryList);
+        this.updateSelectedCountry();
     },
 
     methods: {
         /**
          * Method to fire when the country has changed
          */
-        countryChanged: function()
+        countryChanged(value)
         {
-            this.selectedStateId = null;
+            this.$emit("country-changed", this.getCountryById(parseInt(value)));
+            this.$emit("state-changed", null);
+        },
+
+        /**
+         * @param {*} value
+         */
+        stateChanged(value)
+        {
+            this.$emit("state-changed", parseInt(value));
         },
 
         /**
          * @param countryId
          * @returns {*}
          */
-        getCountryById: function(countryId)
+        getCountryById(countryId)
         {
             return this.countryList.find(
                 function(country)
@@ -59,24 +69,27 @@ Vue.component("country-select", {
 
                     return null;
                 });
+        },
+
+        updateSelectedCountry()
+        {
+            const countryId = this.selectedCountryId || this.shippingCountryId;
+
+            this.selectedCountry = this.getCountryById(countryId);
+
+            if (this.selectedCountry)
+            {
+                this.stateList = CountryService.parseShippingStates(this.countryList, countryId);
+            }
+
+            this.countryChanged(countryId);
         }
     },
 
     watch: {
-        /**
-         * Add watcher to handle the country changed
-         */
-        selectedCountryId: function()
+        selectedCountryId()
         {
-            this.selectedCountryId = this.selectedCountryId || this.localization.currentShippingCountryId;
-            this.selectedCountry = this.getCountryById(this.selectedCountryId);
-
-            if (this.selectedCountry)
-            {
-                this.stateList = CountryService.parseShippingStates(this.countryList, this.selectedCountryId);
-
-                this.$dispatch("selected-country-changed", this.selectedCountry.isoCode2);
-            }
+            this.updateSelectedCountry();
         }
     }
 });

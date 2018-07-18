@@ -1,10 +1,38 @@
+import {normalizeUrl}from "../helper/url";
+
 var NotificationService = require("services/NotificationService");
 var WaitScreenService   = require("services/WaitScreenService");
 
 module.exports = (function($)
 {
-
     var _eventListeners = {};
+
+    $(document).ajaxComplete((ajaxEvent, xhr, options) =>
+    {
+        var response;
+
+        try
+        {
+            response = JSON.parse(xhr.responseText);
+        }
+        catch (exception)
+        {
+
+        }
+
+        if (response)
+        {
+            for (var event in response.events)
+            {
+                _triggerEvent(event, response.events[event]);
+            }
+
+            if (!options.supressNotifications)
+            {
+                _printMessages(response);
+            }
+        }
+    });
 
     return {
         get     : _get,
@@ -72,12 +100,14 @@ module.exports = (function($)
     {
         var deferred = $.Deferred();
 
+        url = normalizeUrl(url);
         config = config || {};
         config.data = data || null;
         config.dataType = config.dataType || "json";
-        config.contentType = config.contentType || "application/x-www-form-urlencoded; charset=UTF-8";
+        config.contentType = typeof config.contentType !== "undefined" ? config.contentType : "application/x-www-form-urlencoded; charset=UTF-8";
         config.doInBackground = !!config.doInBackground;
         config.supressNotifications = !!config.supressNotifications;
+        config.keepOriginalResponse = !!config.keepOriginalResponse;
 
         if (!config.doInBackground)
         {
@@ -86,25 +116,20 @@ module.exports = (function($)
         $.ajax(url, config)
             .done(function(response)
             {
-                if (!config.supressNotifications)
+                if (config.keepOriginalResponse)
                 {
-                    printMessages(response);
+                    deferred.resolve(response);
                 }
-                for (var event in response.events)
+                else
                 {
-                    _triggerEvent(event, response.events[event]);
+                    deferred.resolve(response.data || response);
                 }
-                deferred.resolve(response.data || response);
             })
             .fail(function(jqXHR)
             {
                 var response = jqXHR.responseText ? $.parseJSON(jqXHR.responseText) : {};
 
-                if (!config.supressNotifications)
-                {
-                    printMessages(response);
-                }
-                deferred.reject(response.error);
+                deferred.reject(response);
             })
             .always(function()
             {
@@ -117,7 +142,7 @@ module.exports = (function($)
         return deferred;
     }
 
-    function printMessages(response)
+    function _printMessages(response)
     {
         var notification;
 

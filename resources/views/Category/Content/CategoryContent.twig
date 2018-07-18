@@ -1,11 +1,16 @@
 {% extends getPartial('page-design') %}
 
-{% block PageBody %}
+{% block PartialHead %}
+    <title>{{ category.details[0].metaTitle }} | {{ trans("Ceres::Template.headerCompanyName") }}</title>
 
-    {% set lang = services.sessionStorage.getLang() %}
+    <meta name="description" content="{{ category.details[0].metaDescription }}">
+    <meta name="keywords" content="{{ category.details[0].metaKeywords }}">
 
-    {% include category_template( category.id, lang, frontend.system.webstoreId ) ignore missing %}
-
+    <meta name="robots" content="{{ metaRobots }}">
 {% endblock %}
 
-{# DEPRECATED #}
+{% block PageBody %}
+
+    {% include category_template( category.id, lang, webstoreConfig.webstoreId ) ignore missing %}
+
+{% endblock %}

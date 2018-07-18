@@ -2,6 +2,12 @@
 
 {% import "Ceres::PageDesign.Macros.LayoutContainer" as LayoutContainer %}
 
+{% block PartialHead %}
+    <meta name="description" content="{{ trans('Ceres::Template.legalDisclosureMetaDescription') }}">
+    <meta name="robots" content="{{ config("Ceres.meta.robots_legal_disclosure") }}">
+    <title>{{ trans("Ceres::Template.legalDisclosure") }} | {{ trans("Ceres::Template.headerCompanyName") }}</title>
+{% endblock %}
+
 {% block PageBody %}
 
     {% set legalDisclosure = services.legalInformation.getLegalDisclosure() %}
@@ -10,7 +16,7 @@
         <div class="row">
             <div class="col-xs-12">
                 {% autoescape false %}
-                    <h1>{{ trans("Ceres::Template.generalLegalDisclosure") }}</h1>
+                    <h1>{{ trans("Ceres::Template.legalDisclosure") }}</h1>
                 {% endautoescape %}
 
                 <hr class="m-y-3">

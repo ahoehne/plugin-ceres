@@ -1,30 +1,48 @@
-var ResourceService       = require("services/ResourceService");
+import ApiService from "services/ApiService";
 
 Vue.component("basket-preview", {
 
-    props: [
-        "template"
-    ],
+    delimiters: ["${", "}"],
 
-    data: function()
-    {
-        return {
-            basket: {},
-            basketItems: []
-        };
+    props: {
+        template: {
+            type: String,
+            default: "#vue-basket-preview"
+        },
+        showNetPrices:
+        {
+            type: Boolean,
+            default: false
+        }
     },
 
-    created: function()
+    computed: Vuex.mapState({
+        basket: state => state.basket.data,
+        basketItems: state => state.basket.items,
+        basketNotifications: state => state.basket.basketNotifications
+    }),
+
+    created()
     {
         this.$options.template = this.template;
+
+        this.$store.dispatch("loadBasketData");
+        this.$store.commit("setShowNetPrices", this.showNetPrices);
     },
 
     /**
      * Bind to basket and bind the basket items
      */
-    ready: function()
+    mounted()
     {
-        ResourceService.bind("basket", this);
-        ResourceService.bind("basketItems", this);
+        this.$nextTick(() =>
+        {
+            ApiService.listen("AfterBasketChanged",
+            data =>
+            {
+                this.$store.commit("setBasket", data.basket);
+                this.$store.commit("setShowNetPrices", data.showNetPrices);
+            });
+        });
     }
 });

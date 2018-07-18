@@ -1,8 +1,12 @@
 var ModalService        = require("services/ModalService");
-var APIService          = require("services/APIService");
+var APIService          = require("services/ApiService");
 var NotificationService = require("services/NotificationService");
 
+import TranslationService from "services/TranslationService";
+
 Vue.component("account-settings", {
+
+    delimiters: ["${", "}"],
 
     props: [
         "userData",
@@ -27,9 +31,12 @@ Vue.component("account-settings", {
     /**
      * Initialise the account settings modal
      */
-    ready: function()
+    mounted: function()
     {
-        this.accountSettingsModal = ModalService.findModal(this.$els.accountSettingsModal);
+        this.$nextTick(() =>
+        {
+            this.accountSettingsModal = ModalService.findModal(this.$refs.accountSettingsModal);
+        });
     },
 
     computed: {
@@ -66,15 +73,19 @@ Vue.component("account-settings", {
 
             if (this.newPassword !== "" && (this.newPassword === this.confirmPassword))
             {
-                APIService.post("/rest/io/customer/password", {password: this.newPassword})
+                APIService.post("/rest/io/customer/password", {password: this.newPassword, password2: this.confirmPassword})
                     .done(function(response)
                     {
                         self.clearFieldsAndClose();
-                        NotificationService.success(Translations.Template.accChangePasswordSuccessful).closeAfter(3000);
+                        NotificationService.success(
+                            TranslationService.translate("Ceres::Template.myAccountChangePasswordSuccessful")
+                        ).closeAfter(3000);
                     }).fail(function(response)
                     {
                         self.clearFieldsAndClose();
-                        NotificationService.error(Translations.Template.accChangePasswordFailed).closeAfter(5000);
+                        NotificationService.error(
+                            TranslationService.translate("Ceres::Template.myAccountChangePasswordFailed")
+                        ).closeAfter(5000);
                     });
             }
         },
@@ -95,15 +106,6 @@ Vue.component("account-settings", {
         {
             this.accountSettingsModal.hide();
             this.clearFields();
-        },
-
-        /**
-         * Get the current email address of the user
-         * @returns {*}
-         */
-        getEmail: function()
-        {
-            return this.userData.options[0].value;
         }
     }
 
