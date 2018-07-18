@@ -16,9 +16,11 @@
 
                 <!-- ITEM DETAIL -->
                 <div class="col-md-5 single-rightside m-t-1" v-stick-in-parent>
-                    <div class="producertag h6 producer text-muted" v-if="currentVariation.filter.hasManufacturer">
-                        ${ currentVariation.item.manufacturer.externalName }
-                    </div>
+                    {% if 'item.manufacturer' in itemData or 'all' in itemData %}
+                        <div class="producertag h6 producer text-muted" v-if="currentVariation.filter.hasManufacturer">
+                            ${ currentVariation.item.manufacturer.externalName }
+                        </div>
+                    {% endif %}
 
                     <h1 class="h2 title">
                         <span>
